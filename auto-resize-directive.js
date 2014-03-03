@@ -3,43 +3,44 @@ try{ var base = window; }catch( error ){ base = exports; }
 	define( "autoResizeDirective",
 		[
 			"angular",
-			"jquery",
-			"safeApply",
-			"bindDOM",
-			"amplify"
+			"amplify",
+			"arbiter"
 		],
 		function construct( ){
+			var registeredModule;
 			var autoResizeDirective = function autoResizeDirective( moduleNamespace ){
-				safeApplyFactory( moduleNamespace );
-				bindDOMFactory( moduleNamespace );
-				angular.module( moduleNamespace )
+				if( registeredModule ){
+					return;
+				}
+				registeredModule = moduleNamespace;
+				appDetermine( moduleNamespace )
 					.directive( "autoResize",
 						[
-							"safeApply",
-							"bindDOM",
-							function construct( safeApply ){
+							"$timeout",
+							function construct( $timeout ){
 								return {
 									"restrict": "A",
+									"priority": 2,
 									"scope": true,
 									"link": function link( scope, element, attribute ){
-										safeApply( scope );
-										bindDOM( scope, element, attribute );
-										scope.parentElement = scope.element.parent( );
-										var eventName = "on-resize:" + scope.name;
-										$( window ).resize( function onResize( event ){
-											var eventData = {
-												"scope": scope,
-												"event": event
-											};
-											amplify.publish( eventName, eventData );
-											scope.$emit( eventName, eventData );
-										} );
+										$timeout( function onRender( ){
+											var namespace = $( element ).attr( "namespace" );
+											var eventName = "on-resize:" + namespace;
+											$( window ).resize( function onResize( event ){
+												Arbiter.publish( eventName );
+											} );
+											Arbiter.subscribe( eventName,
+												function handler( eventData ){
+													amplify.publish( eventName )
+												} );
+											Arbiter.publish( eventName, null, { "persist": true } );
+										}, 0 );
 									}
 								};
 							}
 						] );
 			};
-			base.autorResizeDirective =  autorResizeDirective;
-			return autorResizeDirective;
+			base.autoResizeDirective =  autoResizeDirective;
+			return autoResizeDirective;
 		} );
 } )( base );
