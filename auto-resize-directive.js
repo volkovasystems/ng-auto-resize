@@ -7,12 +7,16 @@ try{ var base = window; }catch( error ){ base = exports; }
 			"arbiter"
 		],
 		function construct( ){
+			var registeredEvents = { };
 			var registeredModule;
+
 			var autoResizeDirective = function autoResizeDirective( moduleNamespace ){
 				if( registeredModule ){
 					return;
 				}
+
 				registeredModule = moduleNamespace;
+				
 				appDetermine( moduleNamespace )
 					.directive( "autoResize",
 						[
@@ -24,15 +28,24 @@ try{ var base = window; }catch( error ){ base = exports; }
 									"scope": true,
 									"link": function link( scope, element, attribute ){
 										$timeout( function onRender( ){
-											var namespace = $( element ).attr( "namespace" );
+											var namespace = attribute[ "namespace" ];
 											var eventName = "on-resize:" + namespace;
+
+											if( eventName in registeredEvents ){
+												return;
+											}else{
+												registeredEvents[ eventName ] = scope;
+											}
+
 											$( window ).resize( function onResize( event ){
 												Arbiter.publish( eventName );
 											} );
+											
 											Arbiter.subscribe( eventName,
 												function handler( eventData ){
 													amplify.publish( eventName )
 												} );
+											
 											Arbiter.publish( eventName, null, { "persist": true } );
 										}, 0 );
 									}
